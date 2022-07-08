@@ -18,7 +18,7 @@
 - 点击右上角的**Fork**，将本项目复制到自己的仓库
 - 稍等片刻，将自动跳转至新建的仓库。
 
-![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/1.png)
+![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/1.PNG)
 
 ### Step2 配置个人信息参数
 
@@ -99,13 +99,13 @@
 
   </details>
 
-![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/2.png)
+![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/2.PNG)
 
-![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/3.png)
+![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/3.PNG)
 
-![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/4.png)
+![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/4.PNG)
 
-![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/5.png)
+![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/5.PNG)
 
 ### Step3 配置脚本运行时间(可选，如果没有定时预约座位需求的可以跳过这一步)
 
@@ -118,7 +118,7 @@
 
 如果需要修改脚本的运行时间：
 
-![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/6.png)
+![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/6.PNG)
 
 - 点击页面上方选项 `Code`，回到项目仓库主页。
 
@@ -130,7 +130,7 @@
 
   - 将红框中最前面的`#`去掉，只去掉`#`，不要多去掉空格，同时根据自己的打卡时间需要，修改代码中的 cron 表达式。
 
-    ![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/7.png)
+    ![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/7.PNG)
 
     > **定时注意事项：**
     >
@@ -139,7 +139,7 @@
   
 - 修改完成后，点击页面右侧绿色按钮 `Start commit`，然后点击绿色按钮 `Commit changes`。
 
-  ![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/8.png)
+  ![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/8.PNG)
 
 
 ### Step4 手动测试脚本运行
@@ -164,7 +164,7 @@
 
   请在Github Actions 配置界面中，打开最新的 Workflow run `mian`，查看错误日志，并检查自己的参数配置是否正确。
 
-![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/9.png)
+![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/9.PNG)
 
 
 
