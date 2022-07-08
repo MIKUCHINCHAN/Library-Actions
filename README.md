@@ -128,7 +128,7 @@
 
   - 将红框中最前面的`#`去掉，只去掉`#`，不要多去掉空格，同时根据自己的打卡时间需要，修改代码中的 cron 表达式。
 
-    ![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/7.PNG)
+![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/7.PNG)
 
     > **定时注意事项：**
     >
@@ -137,7 +137,7 @@
   
 - 修改完成后，点击页面右侧绿色按钮 `Start commit`，然后点击绿色按钮 `Commit changes`。
 
-  ![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/8.PNG)
+![1](https://github.com/MIKUCHINCHAN/Library-Actions/blob/main/pic/8.PNG)
 
 
 ### Step4 手动测试脚本运行
