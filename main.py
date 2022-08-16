@@ -13,8 +13,8 @@ import re
 import os
 
 
-USERNAME=os.environ["Library_USERNAME"]  # 账号-->学号
-PASSWORD=os.environ["Library_PASSWORD"]  # 密码
+USERNAME=os.environ["USERNAME"]  # 账号-->学号
+PASSWORD=os.environ["PASSWORD"]  # 密码
 AREA_ID=os.environ["AREA_ID"]  # 想要预约的房间编号，默认是10、8，若想添加其他的，可以先运行脚本，会显示出其他房间的编号，再自行添加或者更改，同时优先考虑高楼层，且房间中优先考虑大座位号
 BANNED_SEAT=os.environ["BANNED_SEAT"]  # 绝对不要的座位号  {房间1号ID:[座位号1,座位号2,座位号3,.....]，房间2号ID:...,...}
 OK_SEAT=os.environ["OK_SEAT"]  # 除了BANNED_SEAT以外座位号的倾向，即一个房间中哪些位置比较喜欢   房间ID对应的列表内，越靠前的列表越是倾向（倾向分级）
