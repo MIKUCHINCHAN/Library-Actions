@@ -13,11 +13,12 @@ import re
 import os
 
 
+# github的云函数env定义的值是字符串，所以对于字典或者列表先要将其还原成原来的格式
 USERNAME=os.environ["USERNAME"]  # 账号-->学号
 PASSWORD=os.environ["PASSWORD"]  # 密码
-AREA_ID=os.environ["AREA_ID"]  # 想要预约的房间编号，默认是10、8，若想添加其他的，可以先运行脚本，会显示出其他房间的编号，再自行添加或者更改，同时优先考虑高楼层，且房间中优先考虑大座位号
-BANNED_SEAT=os.environ["BANNED_SEAT"]  # 绝对不要的座位号  {房间1号ID:[座位号1,座位号2,座位号3,.....]，房间2号ID:...,...}
-OK_SEAT=os.environ["OK_SEAT"]  # 除了BANNED_SEAT以外座位号的倾向，即一个房间中哪些位置比较喜欢   房间ID对应的列表内，越靠前的列表越是倾向（倾向分级）
+AREA_ID=eval(os.environ["AREA_ID"])  # 想要预约的房间编号，默认是10、8，若想添加其他的，可以先运行脚本，会显示出其他房间的编号，再自行添加或者更改，同时优先考虑高楼层，且房间中优先考虑大座位号
+BANNED_SEAT=eval(os.environ["BANNED_SEAT"])  # 绝对不要的座位号  {房间1号ID:[座位号1,座位号2,座位号3,.....]，房间2号ID:...,...}
+OK_SEAT=eval(os.environ["OK_SEAT"])  # 除了BANNED_SEAT以外座位号的倾向，即一个房间中哪些位置比较喜欢   房间ID对应的列表内，越靠前的列表越是倾向（倾向分级）
 DD_BOT_ACCESS_TOKEN = os.environ["DD_BOT_ACCESS_TOKEN"]  # 当只填写了一个通知方式时，未填写的os.environ["xxx"]返回None，所以不影响
 DD_BOT_SECRET = os.environ["DD_BOT_SECRET"]
 BARK_TOKEN=os.environ["BARK_TOKEN"]
@@ -85,7 +86,7 @@ def inform_by_dingding(error_msg=''):
         now=datetime.datetime.now()+datetime.timedelta(hours=8)
     else:
         now=datetime.datetime.now()
-    if RESERVED_SEAT:
+    if SOMETHING_WRONG == 0:
         data = {
             "msgtype": "text",
             "text": {
@@ -260,9 +261,6 @@ def get_area_id():
         for library_info in json.loads(res.content)['data']['list']:
             for floor_info in library_info['_child']:
                 for area_info in floor_info['_child']:
-                    print('AREA_ID',type(AREA_ID))
-                    print('AREA_ID',type(AREA_ID[0]))
-                    print('''area_info['id']''', type(area_info['id']))
                     if area_info['id'] in AREA_ID:
                         print(f"■■■\tid-{area_info['id']}\t{area_info['nameMerge']}")
                         PRINT_AREA_NAME.append(area_info['nameMerge'])
