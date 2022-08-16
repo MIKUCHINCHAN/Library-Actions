@@ -260,6 +260,7 @@ def get_area_id():
         for library_info in json.loads(res.content)['data']['list']:
             for floor_info in library_info['_child']:
                 for area_info in floor_info['_child']:
+                    print('AREA_ID',type(AREA_ID))
                     print('AREA_ID',type(AREA_ID[0]))
                     print('''area_info['id']''', type(area_info['id']))
                     if area_info['id'] in AREA_ID:
