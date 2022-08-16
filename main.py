@@ -33,7 +33,7 @@ SELECT_WAY=eval(os.environ["SELECT_WAY"]) if os.environ["SELECT_WAY"] else ''  #
 OTHERS_ACCOUNT = {}
 dynamic_variable = locals()
 for i in range(1,11):
-    dynamic_variable[f'OTHERS_ACCOUNT_USERNAME_{i}'] =eval(os.environ[f"OTHERS_ACCOUNT_USERNAME_{i}"])
+    dynamic_variable[f'OTHERS_ACCOUNT_USERNAME_{i}'] =eval(os.environ[f"OTHERS_ACCOUNT_USERNAME_{i}"]) if os.environ[f"OTHERS_ACCOUNT_USERNAME_{i}"] else ''
     dynamic_variable[f'OTHERS_ACCOUNT_PASSWORD_{i}'] =os.environ[f"OTHERS_ACCOUNT_PASSWORD_{i}"]
     if dynamic_variable[f'OTHERS_ACCOUNT_USERNAME_{i}']:
         OTHERS_ACCOUNT[dynamic_variable[f'OTHERS_ACCOUNT_USERNAME_{i}']]=dynamic_variable[f'OTHERS_ACCOUNT_PASSWORD_{i}']
