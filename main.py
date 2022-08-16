@@ -31,7 +31,7 @@ SELECT_WAY=os.environ["SELECT_WAY"]  # 筛选座位的方式，可选的为1和2
 # 创建动态变量
 OTHERS_ACCOUNT = {}
 dynamic_variable = locals()
-for i in range(1,10):
+for i in range(1,11):
     dynamic_variable[f'OTHERS_ACCOUNT_USERNAME_{i}'] =os.environ[f"OTHERS_ACCOUNT_USERNAME_{i}"]
     dynamic_variable[f'OTHERS_ACCOUNT_PASSWORD_{i}'] =os.environ[f"OTHERS_ACCOUNT_PASSWORD_{i}"]
     if dynamic_variable[f'OTHERS_ACCOUNT_USERNAME_{i}']:
