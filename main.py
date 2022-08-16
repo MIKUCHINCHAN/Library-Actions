@@ -68,7 +68,7 @@ def inform_by_bark(str):
     """
     requests.get(BARK_TOKEN+str)
 
-def inform_by_dingding(msg=''):
+def inform_by_dingding(error_msg=''):
     """
     通过dingding进行通知结果
     """
