@@ -21,7 +21,7 @@ OK_SEAT=os.environ["OK_SEAT"]  # 除了BANNED_SEAT以外座位号的倾向，即
 DD_BOT_ACCESS_TOKEN = os.environ["DD_BOT_ACCESS_TOKEN"]  # 当只填写了一个通知方式时，未填写的os.environ["xxx"]返回None，所以不影响
 DD_BOT_SECRET = os.environ["DD_BOT_SECRET"]
 BARK_TOKEN=os.environ["BARK_TOKEN"]
-ALWAYS_SPARE_AREA=7  #配合救援模式，填写一个总是坐不满的房间
+ALWAYS_SPARE_AREA=os.environ["ALWAYS_SPARE_AREA"]  #配合救援模式，填写一个总是坐不满的房间
 SELECT_WAY=2  # 筛选座位的方式，可选的为1和2
               # 1 优先级在于房间,优先一个房间的所有位置，其次为第二个房间的所有位置，该情况下，同一房间中的大号优先
               # 2 优先级在于座位号,一级优先的是某几个房间的某些位置，二级优先为某几个房间的另外某些位置……(具体见readme.md)
