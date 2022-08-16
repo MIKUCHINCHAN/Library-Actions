@@ -68,7 +68,7 @@ def inform_by_bark(str):
     """
     requests.get(BARK_TOKEN+str)
 
-def inform_by_dingding(error_msg=''):
+def inform_by_dingding(msg=''):
     """
     通过dingding进行通知结果
     """
@@ -100,11 +100,11 @@ def inform_by_dingding(error_msg=''):
                 "content": f"📖 图书馆预约结果通知\n---------\n预约用户：{PRINT_NAME}\n\n预约项目：{str(PRINT_AREA_NAME)}\n\n预约情况：❌{error_msg}\n\n预约时间：{str(now)[0:16]}\n\n健康状况：{STATUS}\n\n今日剩余可取消次数：{check_cancel_chance(USERNAME)}\n\n场外救援状态：{'关闭' if  not OTHERS_ACCOUNT else '开启' if check_cancel_chance(USERNAME)==1 else '不可使用场外救援,请在30分钟内完成签到'}\n\n场外救援有效性：{f'{len(VALID_OTHERS_ACCOUNT)}/{len(OTHERS_ACCOUNT)}'}"
             },
         }
-    r = requests.post(url=url, data=json.dumps(data), headers=headers, timeout=15).json()
-    if not r['errcode']:
+    return_msg = requests.post(url=url, data=json.dumps(data), headers=headers, timeout=15).json()
+    if not return_msg['errcode']:
         print('【推送成功】')
     else:
-        print("■■■dingding:" + str(r['errcode']) + ": " + str(r['errmsg']))
+        print("■■■dingding:" + str(return_msg['errcode']) + ": " + str(return_msg['errmsg']))
         print('【推送失败，请检查错误信息】')
 
 def get(url,headers,):
@@ -197,9 +197,9 @@ def COOKIE_STATUS():
 #
 #     print("cookie延时成功")
 
-def login_in(USERNAME=USERNAME,PASSWORD=PASSWORD):
+def login_in_1(USERNAME=USERNAME,PASSWORD=PASSWORD):
     """
-    登录获取cookie，也可以用来检查账号的密码的可用性，0-不可用，1-可用
+    多用来登录获取cookie，当登录失败时会调用钉钉进行通知
     """
     print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     res = post(url="http://rg.lib.xauat.edu.cn/api.php/login",
@@ -222,7 +222,31 @@ def login_in(USERNAME=USERNAME,PASSWORD=PASSWORD):
         print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
         return 0
 
-
+def login_in_2(USERNAME=USERNAME,PASSWORD=PASSWORD):
+    """
+    登录获取cookie，当登录失败时不会调用钉钉进行通知
+    多用来检查账号的密码的可用性，0-不可用，1-可用，
+    """
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+    res = post(url="http://rg.lib.xauat.edu.cn/api.php/login",
+                   headers={"Referer": "http://www.skalibrary.com/",
+                            "User-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1 Edg/99.0.4844.74"},
+                   data={"username": USERNAME, "password": PASSWORD, "from": "mobile"})
+    if json.loads(res.content)['status']:
+        print(f"■■■ 姓名   \t{json.loads(res.content)['data']['list']['name']}")
+        print(f"■■■登录状态\t{json.loads(res.content)['msg']}")
+        global PRINT_NAME
+        PRINT_NAME =json.loads(res.content)['data']['list']['name']
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+        return 1
+    else:
+        print(f"■■■登录失败\t{json.loads(res.content)['msg']}")
+        # if INFORMED_WAY==0:
+        #     inform_by_dingding(f"登录失败 {json.loads(res.content)['msg']}")
+        # if INFORMED_WAY == 1:
+        #     inform_by_bark(f"登录失败 {json.loads(res.content)['msg']}")
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+        return 0
 
 def check_OTHERS_ACCOUNT_valid():
     """
@@ -235,7 +259,7 @@ def check_OTHERS_ACCOUNT_valid():
     _={}  #用于存放密码正确但取消预约次数=0的用户
     for others_account_name, others_account_password in OTHERS_ACCOUNT.items():
         # login_in函数中的全局变量会产生bug，每次登陆完他人的账号，**最后都要登陆一下自己的**
-        if login_in(others_account_name,others_account_password):
+        if login_in_2(others_account_name,others_account_password):
             if check_cancel_chance(others_account_name)==1:
                 VALID_OTHERS_ACCOUNT[others_account_name]=others_account_password
             else:
@@ -686,7 +710,7 @@ if __name__ == '__main__':
     INFORMED_WAY=get_inform_way()
 
     req = requests.session()
-    if not login_in(USERNAME, PASSWORD):
+    if not login_in_1(USERNAME, PASSWORD):
         quit()
 
     while not RESERVED_SEAT:
@@ -695,8 +719,8 @@ if __name__ == '__main__':
         check_OTHERS_ACCOUNT_valid()
 
         # 登陆自己的帐号，如果自己账号未成功登陆就停止脚本
-        if not login_in(USERNAME,PASSWORD):
-            print( login_in(USERNAME,PASSWORD))
+        if not login_in_1(USERNAME,PASSWORD):
+            print( login_in_1(USERNAME,PASSWORD))
             quit()
 
         # 获取区域id信息，便于选择,仅作展示用，且只执行一次
@@ -768,7 +792,7 @@ if __name__ == '__main__':
 
         all_users = list(list(list(VALID_OTHERS_ACCOUNT.keys()).__reversed__()).__add__([USERNAME]).__reversed__())
 
-        login_in(USERNAME,PASSWORD)
+        login_in_1(USERNAME,PASSWORD)
 
         if check_cancel_chance(USERNAME)==1:
 
@@ -779,7 +803,7 @@ if __name__ == '__main__':
                 #检查自己的状态,return返回的，0-今日无记录，3-使用中，4-已使用，6-用户取消，8-已关闭，9-预约开始提醒
                 #签到完成
 
-                login_in(USERNAME,PASSWORD)
+                login_in_1(USERNAME,PASSWORD)
 
                 if check_status() == 3:
                     # 检查所在房间是不是长期空房间
@@ -789,9 +813,9 @@ if __name__ == '__main__':
                         checkout(USERNAME)
                         lastest_user_name=all_users[all_users.index(others_account_name)-1]
                         lastest_user_password=VALID_OTHERS_ACCOUNT[lastest_user_name]
-                        login_in(lastest_user_name,lastest_user_password)
+                        login_in_1(lastest_user_name,lastest_user_password)
                         cancel_reserve(USERNAME=lastest_user_name)
-                        login_in(USERNAME,PASSWORD)
+                        login_in_1(USERNAME,PASSWORD)
                         reserve(USERNAME=USERNAME)
                         time.sleep(120)
                         now_seat_id, now_area = get_now_seat(USERNAME)
@@ -822,7 +846,7 @@ if __name__ == '__main__':
                             inform_by_dingding('开始救场')
                         if INFORMED_WAY == 1:
                             inform_by_bark('开始救场')
-                        login_in(others_account_name,others_account_password)
+                        login_in_1(others_account_name,others_account_password)
                         reserve(USERNAME=others_account_name)
                         print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
                 elif check_status() == 6:
@@ -834,9 +858,9 @@ if __name__ == '__main__':
                         inform_by_bark('开始救场')
                     last_user_name = all_users[all_users.index(others_account_name) - 1]
                     last_user_password = VALID_OTHERS_ACCOUNT[last_user_name]
-                    login_in(last_user_name, last_user_password)
+                    login_in_1(last_user_name, last_user_password)
                     cancel_reserve(USERNAME=last_user_name)
-                    login_in(others_account_name,others_account_password)
+                    login_in_1(others_account_name,others_account_password)
                     reserve(USERNAME=others_account_name)
                     print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
                 ####关于如何检查自己是否到馆，可以选定某个长期有空位的房间（最好永远没有坐满的那种），自己进馆后到机器上刷卡预约那个空房间的任一个位置
