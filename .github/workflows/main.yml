@@ -40,4 +40,4 @@ jobs:
         DD_BOT_ACCESS_TOKEN: ${{secrets.DD_BOT_ACCESS_TOKEN}}
         DD_BOT_SECRET: ${{secrets.DD_BOT_SECRET}}
         BARK_TOKEN: ${{secrets.BARK_TOKEN}}
-      run: python wzxy-dailyreport.py
+      run: python main.py
