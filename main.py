@@ -21,17 +21,13 @@ OK_SEAT=os.environ["OK_SEAT"]  # 除了BANNED_SEAT以外座位号的倾向，即
 DD_BOT_ACCESS_TOKEN = os.environ["DD_BOT_ACCESS_TOKEN"]  # 当只填写了一个通知方式时，未填写的os.environ["xxx"]返回None，所以不影响
 DD_BOT_SECRET = os.environ["DD_BOT_SECRET"]
 BARK_TOKEN=os.environ["BARK_TOKEN"]
-print(OK_SEAT)
-dwadawf=os.environ["dwadawf"]  #配合救援模式，填写一个总是坐不满的房间
-print(dwadawf)
-SELECT_WAY=2  # 筛选座位的方式，可选的为1和2
+ALWAYS_SPARE_AREA=os.environ["ALWAYS_SPARE_AREA"]  #配合救援模式，填写一个总是坐不满的房间
+SELECT_WAY=os.environ["SELECT_WAY"]  # 筛选座位的方式，可选的为1和2
               # 1 优先级在于房间,优先一个房间的所有位置，其次为第二个房间的所有位置，该情况下，同一房间中的大号优先
               # 2 优先级在于座位号,一级优先的是某几个房间的某些位置，二级优先为某几个房间的另外某些位置……(具体见readme.md)
 
 
-# 救场用户的账号密码，用于解决由于意外不能在30min内完成签到的情况，账号越靠前越快用到，且对于账号可用性无需保证都能用，会每次检查账号密码是否正确
-# 这里设置最多100个救援用户，理论上能添加无数个账号
-# 当OTHERS_ACCOUNT={}即不启用救援模式
+# 救场用户的账号密码，当OTHERS_ACCOUNT={}即不启用救援模式,用于解决由于意外不能在30min内完成签到的情况，账号越靠前越快用到，且对于账号可用性无需保证都能用，会每次检查账号密码是否正确;如果能收集到很多账号这里可添加无数个
 # 创建动态变量
 OTHERS_ACCOUNT = {}
 dynamic_variable = locals()
@@ -42,8 +38,39 @@ for i in range(1,101):
         OTHERS_ACCOUNT[dynamic_variable[f'OTHERS_ACCOUNT_USERNAME_{i}']]=dynamic_variable[f'OTHERS_ACCOUNT_PASSWORD_{i}']
 
 
-# 通过dingding进行通知结果
+def get_inform_way():
+    """
+    同时考虑到本地和github云端执行，先判断变量是否存在-对于本地是不存在的、云端是存在的但为None，再判断是否是None
+    当填写多个通知方式时，越在前面越是优先，若都没填写那么终止运行程序
+    :return: 0-钉钉 1-BARK
+    """
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+    if 'DD_BOT_ACCESS_TOKEN' in globals().keys():
+        if DD_BOT_ACCESS_TOKEN:
+            INFORMED_WAY = 0
+            print('■■■通知方式为 钉钉')
+            return 0
+    if 'BARK_TOKEN' in globals().keys():
+        if BARK_TOKEN:
+            INFORMED_WAY = 1
+            print('■■■通知方式为 BARK')
+            return 1
+    if 'INFORMED_WAY' not in globals().keys():
+        print('■■■通知方式未设置或设置错误，请检查')
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+        quit()
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+
+def inform_by_bark(str):
+    """
+    通过bark进行通知结果
+    """
+    requests.get(BARK_TOKEN+str)
+
 def inform_by_dingding(error_msg=''):
+    """
+    通过dingding进行通知结果
+    """
     print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     timestamp = str(round(time.time() * 1000))  # 时间戳
     secret_enc = DD_BOT_SECRET.encode("utf-8")
@@ -79,8 +106,10 @@ def inform_by_dingding(error_msg=''):
         print("■■■dingding:" + str(r['errcode']) + ": " + str(r['errmsg']))
         print('【推送失败，请检查错误信息】')
 
-# 处理连接超时的情况
 def get(url,headers,):
+    """
+    处理连接超时的情况
+    """
     try:
         response = requests.get(url=url, headers=headers, timeout=5)
         if response.status_code == 200:
@@ -103,6 +132,9 @@ def get(url,headers,):
     return -1  # 当所有请求都失败，返回  -1  ，此时有极大的可能是网络问题或IP被封。
 
 def post(url,headers,data):
+    """
+    处理连接超时的情况
+    """
     try:
         response = req.post(url=url, headers=headers, timeout=5,data=data)
         if response.status_code == 200:
@@ -125,15 +157,24 @@ def post(url,headers,data):
 
     return -1  # 当所有请求都失败，返回  -1  ，此时有极大的可能是网络问题或IP被封。
 
-# cookie的寿命为5分钟，所以当到第4分钟的时候直接重新请求
-def check_cookie_lifetime():
-    global COOKIE_IS_EXPIRED
+def COOKIE_STATUS():
+    """
+    检查cookie是否失效，寿命为5分钟
+    :return: 0-失效 1-未失效
+    """
     expire = datetime.datetime.strptime(unquote_plus(req.cookies.get('expire')), '%Y-%m-%d %H:%M:%S')
-    now = datetime.datetime.now(pytz.timezone('Asia/Shanghai'))  #注意在云上的时间是国际标准时间
-    now = now.now()+datetime.timedelta(microseconds=-now.microsecond)  ## 把微秒去掉
-    print('■■■COOKIE失效时间   \t',expire)
-    print('■■■当前上海时间   \t',now)
-    COOKIE_IS_EXPIRED = False if (expire -now).seconds>60 else True
+    now = datetime.datetime.now(pytz.timezone('Asia/Shanghai')).now().replace(microsecond=0)  #注意在云上的时间是国际标准时间,把微秒去掉
+    if (expire -now).seconds>60:
+        return 1
+    else:
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+        print('■■■COOKIE已失效（寿命<=60s）')
+        print('■■■COOKIE失效时间   \t',expire)
+        print('■■■当前上海时间   \t',now)
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+        return 0
+
+
 
 # def expand_cookie_lifetime():
 #
@@ -155,52 +196,65 @@ def check_cookie_lifetime():
 #
 #     print("cookie延时成功")
 
-# 登录获取cookie，也可以用来检查账号的密码的可用性，0-不可用，1-可用
 def login_in(USERNAME=USERNAME,PASSWORD=PASSWORD):
+    """
+    登录获取cookie，也可以用来检查账号的密码的可用性，0-不可用，1-可用
+    """
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     res = post(url="http://rg.lib.xauat.edu.cn/api.php/login",
                    headers={"Referer": "http://www.skalibrary.com/",
                             "User-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1 Edg/99.0.4844.74"},
                    data={"username": USERNAME, "password": PASSWORD, "from": "mobile"})
     if json.loads(res.content)['status']:
-        global COOKIE_IS_EXPIRED
-        COOKIE_IS_EXPIRED=0
         print(f"■■■ 姓名   \t{json.loads(res.content)['data']['list']['name']}")
         print(f"■■■登录状态\t{json.loads(res.content)['msg']}")
         global PRINT_NAME
         PRINT_NAME =json.loads(res.content)['data']['list']['name']
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
         return 1
     else:
-        global SOMETHING_WRONG
-        SOMETHING_WRONG = 1
         print(f"■■■登录失败\t{json.loads(res.content)['msg']}")
         if INFORMED_WAY==0:
             inform_by_dingding(f"登录失败 {json.loads(res.content)['msg']}")
-            return 0
         if INFORMED_WAY == 1:
             inform_by_bark(f"登录失败 {json.loads(res.content)['msg']}")
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
         return 0
 
-# 检查救场用户的可用性,过程中会将密码有效的且取消次数为1的用户放到VALID_OTHERS_ACCOUNT内，密码无效的用户放到INVALID_OTHERS_ACCOUNT内
+
+
 def check_OTHERS_ACCOUNT_valid():
-    print('■■■检查救场用户的可用性')
+    """
+    检查救场用户的可用性,过程中会将密码有效的且取消次数为1的用户放到VALID_OTHERS_ACCOUNT内，密码无效的用户放到INVALID_OTHERS_ACCOUNT内
+    """
     # 检查救场用户的可用性
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     global VALID_OTHERS_ACCOUNT
     global INVALID_OTHERS_ACCOUNT
+    _={}  #用于存放密码正确但取消预约次数=0的用户
     for others_account_name, others_account_password in OTHERS_ACCOUNT.items():
-        # login_in函数中的全局变量会产生bug，每次登陆完他人的账号，最后都要登陆一下自己的
+        # login_in函数中的全局变量会产生bug，每次登陆完他人的账号，**最后都要登陆一下自己的**
         if login_in(others_account_name,others_account_password):
             if check_cancel_chance(others_account_name)==1:
                 VALID_OTHERS_ACCOUNT[others_account_name]=others_account_password
+            else:
+                _[others_account_name]=others_account_password
         else:
             INVALID_OTHERS_ACCOUNT[others_account_name] = others_account_password
-    print(f'■■■救场用户有效占比:{len(VALID_OTHERS_ACCOUNT)}/{len(OTHERS_ACCOUNT)}，失效的为{list(INVALID_OTHERS_ACCOUNT.keys())}')
-    login_in(USERNAME,PASSWORD)
+    print(f'■■■救场用户有效占比:{len(VALID_OTHERS_ACCOUNT)}/{len(OTHERS_ACCOUNT)}')
+    if list(INVALID_OTHERS_ACCOUNT.keys()):
+        print(f'■■■因密码错误而失效：{list(INVALID_OTHERS_ACCOUNT.keys())}')
+    if list(_.keys()):
+        print(f'■■■因取消次数不足而失效：{list(_.keys())}')
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
 
-# 获取区域信息,不需要cookie
 def get_area_id():
-    res = get(url="http://rg.lib.xauat.edu.cn/api.php/areas?tree=1",
-                  headers={"Referer": "http://www.skalibrary.com/",
-                           "User-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1 Edg/99.0.4844.74"})
+    """
+    获取区域信息,不需要cookie即可直接调用
+    :return 0-失败，1-成功
+    """
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+    res = get(url="http://rg.lib.xauat.edu.cn/api.php/areas?tree=1",headers={"Referer": "http://www.skalibrary.com/"})
     if json.loads(res.content)['status']:
         # 第一层-图书馆信息（可能是两个图书馆），第二层-楼层信息，第三层-空间信息
         for library_info in json.loads(res.content)['data']['list']:
@@ -218,45 +272,53 @@ def get_area_id():
                     # print(area_info['sort'])
                     # print(area_info['type'])
                     # print(area_info['ROW_NUMBER'])
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     else:
-        global SOMETHING_WRONG
-        SOMETHING_WRONG = 1
         print(f"■■■获取区域信息失败 {json.loads(res.content)['msg']}")
         if INFORMED_WAY==0:
             inform_by_dingding(f"获取区域信息失败 {json.loads(res.content)['msg']}")
         if INFORMED_WAY==1:
             inform_by_bark(f"获取区域信息失败 {json.loads(res.content)['msg']}")
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+        quit()
+
 
 def url_info():
+    """
+    获取url信息,不需要cookie
+    """
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     for area_id in AREA_ID:
-        # 获取url信息,不需要cookie
         res = get(
             url=f"http://rg.lib.xauat.edu.cn/api.php/space_time_buckets?area={area_id}&day={datetime.date.today()}",
-            headers={"Referer": "http://www.skalibrary.com/",
-                     "User-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1 Edg/99.0.4844.74"})
+            headers={"Referer": "http://www.skalibrary.com/"})
         if json.loads(res.content)['status']:
+            #  spaceId代表这一房间的id，永远不变，SEGMENT=id=bookTimeId，每个房间每天都不一样，含房间和时间信息
             spaceId = json.loads(res.content)['data']['list'][0]['spaceId']
-            bookTimeId = json.loads(res.content)['data']['list'][0]['bookTimeId']
+            id = json.loads(res.content)['data']['list'][0]['id']
             endTime = json.loads(res.content)['data']['list'][0]['endTime']
             day = json.loads(res.content)['data']['list'][0]['day']
             startTime = json.loads(res.content)['data']['list'][0]['startTime']
-            # status=json.loads(res.content)['data']['list'][0]['status']可能和禁止预约有关
-            seat_info_url=f"http://rg.lib.xauat.edu.cn/api.php/spaces_old?area={area_id}&day={day}&endTime={endTime}&segment={bookTimeId}&startTime={startTime}"
-            SEGMENT.append(bookTimeId)
+            seat_info_url=f"http://rg.lib.xauat.edu.cn/api.php/spaces_old?area={area_id}&day={day}&endTime={endTime}&segment={id}&startTime={startTime}"
+            SEGMENT.append(id)
             SEAT_INFO_URL.append(seat_info_url)
+            print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
         else:
-            global SOMETHING_WRONG
-            SOMETHING_WRONG = 1
             print(f"■■■获取可预约时间段失败 {json.loads(res.content)['msg']}")
             if INFORMED_WAY == 0:
                 inform_by_dingding(f"获取可预约时间段失败 {json.loads(res.content)['msg']}")
             if INFORMED_WAY == 1:
-                inform_by_bark(f"获取空间预约信息失败 {json.loads(res.content)['msg']}")
-
+                inform_by_bark(f"获取可预约时间段失败 {json.loads(res.content)['msg']}")
+            print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+            quit()
 
 def seat_info(seat_info_url):
-    SEAT_INFO_URL.index(seat_info_url)
-    #根据链接中的area_id 来获取对应的中文名
+    """
+    根据链接中的area_id 来获取对应的中文名，并获取空闲座位的信息
+    :param seat_info_url: 传入的网址类似http://rg.lib.xauat.edu.cn/api.php/spaces_old?area=8&day=2022-07-09&endTime=22:00&segment=1403926&startTime=14:50
+    :return:
+    """
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     area_name=AREA_ID_AND_NAME[int(re.search('\?area=(\d*)&day', seat_info_url).group(1))]
     # 获取seat信息,不需要cookie
     res = get(
@@ -271,20 +333,26 @@ def seat_info(seat_info_url):
             seat_name = seat_info['name']
             seat_status_name = seat_info['status_name']
             seat_area=seat_info['area']
+            # area_name = seat_info['area_name']  #不可以从这里取得房间名称，因为对于三楼移动设备或者四楼移动设备区显示都是'移动设备区'
             if seat_status_name == "空闲":
                 RESERVE_SEAT.append([seat_id,seat_name,seat_area,SEGMENT[SEAT_INFO_URL.index(seat_info_url)]])
-        now = datetime.datetime.now(pytz.timezone('Asia/Shanghai'))  # 注意在云上的时间是国际标准时间
-        now = now.now() + datetime.timedelta(microseconds=-now.microsecond)  ## 把微秒去掉
+        now = datetime.datetime.now(pytz.timezone('Asia/Shanghai')).now().replace(
+            microsecond=0)  # 注意在云上的时间是国际标准时间,把微秒去掉
         print(f'■■■{now}\t{area_name}\t可预约的座位\t',RESERVE_SEAT)
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+        return 1
     else:
-        global SOMETHING_WRONG
-        SOMETHING_WRONG = 1
         print(f"■■■获取空间预约信息失败 {json.loads(res.content)['msg']}")
         inform_by_dingding(f"获取空间预约信息失败 {json.loads(res.content)['msg']}")
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+        return 0
 
-
-def reserve():
-
+def reserve(USERNAME=USERNAME):
+    """
+    预约
+    :return: 0-预约失败，所有空闲位置都是banned，1-成功
+    """
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     if SELECT_WAY==2:
         # 先对OK_SEAT按优先级进行遍历
         results=[]
@@ -352,24 +420,28 @@ def reserve():
                 inform_by_dingding()
             if INFORMED_WAY == 1:
                 inform_by_bark(f"■■■{AREA_ID_AND_NAME[SEAT[2]]}■■座位号-{SEAT[1]}■■{STATUS}")
-            break
+            print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+            return 1
         elif json.loads(res.content)['status']==0 and json.loads(res.content)['msg']=='该空间当前状态不可预约':
             print(f'■■■预约信息■■seat_id {SEAT[0]}■■seat_name {SEAT[1]}■■area_id {SEAT[2]}■■area_segment {SEAT[3]}■■')
             print(f"■■■{AREA_ID_AND_NAME[SEAT[2]]}■■座位号■■{SEAT[1]}")
             print('该空间当前状态不可预约，正在预约其他座位')
         else:
-            global SOMETHING_WRONG
-            SOMETHING_WRONG = 1
             print(f"■■■预约失败 {json.loads(res.content)['msg']}")
             if INFORMED_WAY == 0:
                 inform_by_dingding(f"预约失败 {json.loads(res.content)['msg']}")
             if INFORMED_WAY == 1:
                 inform_by_bark(f"预约失败 {json.loads(res.content)['msg']}")
-            break
+            print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+            quit()
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+    return 0
 
-# 查询今日还可取消的次数
 def check_cancel_chance(USERNAME):
-
+    """
+    查询今日还可取消的次数
+    """
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     res = get(
         url=f"http://rg.lib.xauat.edu.cn/api.php/profile/books/",
         headers={
@@ -377,8 +449,7 @@ def check_cancel_chance(USERNAME):
             "User-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1 Edg/99.0.4844.74",
             'Cookie': f'userid={USERNAME};access_token={req.cookies.get("access_token")}'})
 
-    now = datetime.datetime.now(pytz.timezone('Asia/Shanghai'))  # 注意在云上的时间是国际标准时间
-    now = now.now() + datetime.timedelta(microseconds=-now.microsecond)  ## 把微秒去掉
+    now = datetime.datetime.now(pytz.timezone('Asia/Shanghai')).now().replace(microsecond=0)  # 注意在云上的时间是国际标准时间,把微秒去掉
 
     cancel_chance = 1  # 从1开始减
 
@@ -400,17 +471,20 @@ def check_cancel_chance(USERNAME):
     # 包含今天没有记录的情况
     if cancel_chance==1:
         print('■■■今日还可以取消一次')
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
         return 1
     elif cancel_chance==0:
         print('■■■今日不可以取消')
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
         return 0
 
-
-
-# 今天的记录中最新的那条的状态，return返回的，0-今日无记录，3-使用中，4-已使用，6-用户取消，8-已关闭，9-预约开始提醒
 def check_status(USERNAME=USERNAME):
+    """
+    今天的记录中最新的那条的状态，return返回的，0-今日无记录，3-使用中，4-已使用，6-用户取消，8-已关闭，9-预约开始提醒
+    """
     # 注意这里会先查询历史记录，并向RESERVE_SEAT里append一个id编号，不要与自动刷新座位时的append混用
     # 获取预约历史信息,需要cookie:userid=2102210421;access_token=d810f72e23effcd671571dba9d9726df
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     res = get(
         url=f"http://rg.lib.xauat.edu.cn/api.php/profile/books/",
         headers={
@@ -418,8 +492,7 @@ def check_status(USERNAME=USERNAME):
             "User-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1 Edg/99.0.4844.74",
             'Cookie': f'userid={USERNAME};access_token={req.cookies.get("access_token")}'})
 
-    now = datetime.datetime.now(pytz.timezone('Asia/Shanghai'))  # 注意在云上的时间是国际标准时间
-    now = now.now() + datetime.timedelta(microseconds=-now.microsecond)  ## 把微秒去掉
+    now = datetime.datetime.now(pytz.timezone('Asia/Shanghai')).now().replace(microsecond=0)  # 注意在云上的时间是国际标准时间,把微秒去掉
 
     # 检查今日记录的时间，如"202207072021"
     for record in json.loads(res.content)['data']['list']:
@@ -428,26 +501,38 @@ def check_status(USERNAME=USERNAME):
         if record['no'][:8]==str(now.date()).replace('-',''):
             # 这里return的值对应json.loads(res.content)['data']['list'][0]["status"]
             if record['statusName'] == '使用中':
-                print('■■■今日最新状态   \t使用中')
+                print('■■■今日最新状态   \t使用中,在馆')
+                if INFORMED_WAY == 0:
+                    inform_by_dingding('检测到人在馆')
+                if INFORMED_WAY == 1:
+                    inform_by_bark('检测到人在馆')
+                print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
                 return 3
             elif record['statusName'] == '已使用':
                 print('■■■今日最新状态   \t已使用')
+                print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
                 return 4
             elif record['statusName'] == '用户取消':
                 print('■■■今日最新状态   \t用户取消')
+                print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
                 return 6
             elif record['statusName'] == '已关闭':
                 print('■■■今日最新状态   \t已关闭')
+                print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
                 return 8
             elif record['statusName'] == '预约开始提醒':
                 print('■■■今日最新状态   \t预约中&未签到')
+                print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
                 return 9
 
     print('■■■今日无记录')
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     return 0
 
-# 当今天最新一条为'使用中'状态时,获取当前座位的id而不是座位号及房间id,int类型
 def get_now_seat(USERNAME=USERNAME):
+    """
+    当今天最新一条为'使用中'状态时,获取当前座位的id而不是座位号及房间id,int类型
+    """
     # 注意这里会先查询历史记录，并向RESERVE_SEAT里append一个id编号，不要与自动刷新座位时的append混用
     # 获取预约历史信息,需要cookie:userid=2102210421;access_token=d810f72e23effcd671571dba9d9726df
     res = get(
@@ -469,8 +554,10 @@ def get_now_seat(USERNAME=USERNAME):
             if record['statusName'] == '使用中':
                 return record['id'],record['spaceDetailInfo']["area"]
 
-
 def cancel_reserve(USERNAME=USERNAME):
+    """
+    取消预约
+    """
     # 注意这里会先查询历史记录，并向RESERVED_SEAT里append一个id编号，不要与自动刷新座位时的append混用
     # 获取预约历史信息,需要cookie:userid=2102210421;access_token=d810f72e23effcd671571dba9d9726df
     res = get(
@@ -520,14 +607,19 @@ def cancel_reserve(USERNAME=USERNAME):
             inform_by_bark('取消预约   \t未预约或者预约超时，无需取消预约')
         return 0
 
-# 签到-失效 中南大学和西建发送的报头一样
 def checkIn():
+    """
+    签到-失效 中南大学和西建发送的报头一样
+    """
     pass
 
-# 签离,馆内签离
 def checkout(USERNAME):
+    """
+    签离,馆内签离
+    """
     # 注意这里会先查询历史记录，并向RESERVED_SEAT里append一个id编号，不要与自动刷新座位时的append混用
     # 获取预约历史信息,需要cookie:userid=2102210421;access_token=d810f72e23effcd671571dba9d9726df
+    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
     res = get(
         url=f"http://rg.lib.xauat.edu.cn/api.php/profile/books/",
         headers={
@@ -552,13 +644,15 @@ def checkout(USERNAME):
                 inform_by_dingding('签离结果   \t成功签离')
             if INFORMED_WAY == 1:
                 inform_by_bark('签离结果   \t成功签离')
-                return 1
+            print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+            return 1
         else:
             print('■■■签离结果   \t签离失败：', json.loads(res.content))
             if INFORMED_WAY == 0:
                 inform_by_dingding(f'签离结果   \t签离失败, {json.loads(res.content)}')
             if INFORMED_WAY == 1:
                 inform_by_bark(f'签离结果   \t签离失败, {json.loads(res.content)}')
+            print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
             return 0
     else:
         print('■■■签离结果   \t还未使用位置，无需签离')
@@ -566,13 +660,13 @@ def checkout(USERNAME):
             inform_by_dingding('签离结果   \t还未使用位置，无需签离')
         if INFORMED_WAY == 1:
             inform_by_bark('签离结果   \t还未使用位置，无需签离')
+        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
         return 0
 
 if __name__ == '__main__':
 
 
-    COOKIE_IS_EXPIRED=1
-    SOMETHING_WRONG=0
+
     IS_UTC=0
 
     AREA_ID_AND_NAME = {}
@@ -587,96 +681,84 @@ if __name__ == '__main__':
     VALID_OTHERS_ACCOUNT = {}  #筛选出的有效他人账号
     INVALID_OTHERS_ACCOUNT = {}  #筛选出的失效他人账号
 
-    while COOKIE_IS_EXPIRED and not RESERVED_SEAT:
+    # 获取当前通知方式 0-钉钉 1-BARK
+    INFORMED_WAY=get_inform_way()
 
-        req=requests.session()
+    req = requests.session()
+    if not login_in(USERNAME, PASSWORD):
+        quit()
 
-        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+    while not RESERVED_SEAT:
+
         # 检查救场用户的可用性,过程中会将有效的用户放到VALID_OTHERS_ACCOUNT内，并返回有效账号的个数
         check_OTHERS_ACCOUNT_valid()
-        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
 
-
-        login_in(USERNAME,PASSWORD)
-        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+        # 登陆自己的帐号，如果自己账号未成功登陆就停止脚本
+        if not login_in(USERNAME,PASSWORD):
+            print( login_in(USERNAME,PASSWORD))
+            quit()
 
         # 获取区域id信息，便于选择,仅作展示用，且只执行一次
         get_area_id()
-        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
 
-        ################################功能一：预约座位################################
-        ###############################################################################
         # 获取url信息，便于构造获取seat信息的url地址
         url_info()
 
-        while not COOKIE_IS_EXPIRED and not RESERVED_SEAT and not SOMETHING_WRONG:
-            for seat_info_url in SEAT_INFO_URL:
+        while COOKIE_STATUS() and not RESERVED_SEAT:
 
-                if not COOKIE_IS_EXPIRED and not RESERVED_SEAT and not SOMETHING_WRONG:
-                    seat_info(seat_info_url)
-
-                    ################################################################################
-                    if SELECT_WAY==1:
-                    # 以下为选座时，优先第一个房间的所有位置，其次是第二个房间的所有位置.....
-                        if RESERVE_SEAT and not SOMETHING_WRONG:
-                            print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
-                            COOKIE_IS_EXPIRED = check_cookie_lifetime()
-                            print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
-                            if not COOKIE_IS_EXPIRED and not SOMETHING_WRONG:
-                                reserve()
-                                if not RESERVED_SEAT and not SOMETHING_WRONG:
+            # 以下为选座时，优先第一个房间的所有位置，其次是第二个房间的所有位置.....
+            if SELECT_WAY == 1:
+                for seat_info_url in SEAT_INFO_URL:
+                    if COOKIE_STATUS() and not RESERVED_SEAT:
+                        seat_info(seat_info_url)
+                        if RESERVE_SEAT:
+                            if COOKIE_STATUS():
+                                reserve(USERNAME=USERNAME)
+                                if not RESERVED_SEAT:
                                     RESERVE_SEAT = []
+                                    RESERVE_SEAT_SORTED= []
                             else:
                                 AREA_ID_AND_NAME = {}
                                 SEAT_INFO_URL = []
-                                RESERVE_SEAT = []
+                                RESERVE_SEAT = []  # 可预约的所有座位列表，座位id,座位name,座位所在房间的编号,座位所在房间对应的segment
+                                RESERVE_SEAT_SORTED = []  # 对上面的座位进行排序
+                                RESERVED_SEAT = []  # 预约到的座位
                                 SEGMENT = []
-                                RESERVED_SEAT = []
+                                STATUS = ''
+                                PRINT_NAME = ''
                                 PRINT_AREA_NAME = []
-                    ##################################################################################
+                                VALID_OTHERS_ACCOUNT = {}  # 筛选出的有效他人账号
+                                INVALID_OTHERS_ACCOUNT = {}  # 筛选出的失效他人账号
+                        ##################################################################################
 
-            ########################################################################################################################
-            if SELECT_WAY == 2:
             # 以下为选座时，优先第一个房间的一级位置，其次是第二个房间的一级位置，其次是第一个房间的二级位置，其次是第二个房间的二级位置.....
-                if RESERVE_SEAT and not SOMETHING_WRONG:
-                    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
-                    COOKIE_IS_EXPIRED = check_cookie_lifetime()
-                    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
-                    if not COOKIE_IS_EXPIRED and not SOMETHING_WRONG:
-                        reserve()
-                        if not RESERVED_SEAT and not SOMETHING_WRONG:
+            if SELECT_WAY == 2:
+                for seat_info_url in SEAT_INFO_URL:
+                    if COOKIE_STATUS() and not RESERVED_SEAT:
+                        seat_info(seat_info_url)
+                if RESERVE_SEAT:
+                    if COOKIE_STATUS():
+                        reserve(USERNAME=USERNAME)
+                        if not RESERVED_SEAT:
                             RESERVE_SEAT = []
+                            RESERVE_SEAT_SORTED = []
                     else:
                         AREA_ID_AND_NAME = {}
                         SEAT_INFO_URL = []
-                        RESERVE_SEAT = []
+                        RESERVE_SEAT = []  # 可预约的所有座位列表，座位id,座位name,座位所在房间的编号,座位所在房间对应的segment
+                        RESERVE_SEAT_SORTED = []  # 对上面的座位进行排序
+                        RESERVED_SEAT = []  # 预约到的座位
                         SEGMENT = []
-                        RESERVED_SEAT = []
+                        STATUS = ''
+                        PRINT_NAME = ''
                         PRINT_AREA_NAME = []
-            ########################################################################################################################
+                        VALID_OTHERS_ACCOUNT = {}  # 筛选出的有效他人账号
+                        INVALID_OTHERS_ACCOUNT = {}  # 筛选出的失效他人账号
+                ########################################################################################################################
 
-        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
-        ###############################################################################
-        ###############################################################################
-
-        if SOMETHING_WRONG:
-            break
-
-        if COOKIE_IS_EXPIRED==1:
+        if not COOKIE_STATUS():
             continue
 
-        ################################功能二：取消预约################################
-        ###############################################################################
-        # cancel_reserve()
-        # print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
-        # break
-        ###############################################################################
-        ###############################################################################
-
-    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
-    # 检查救场用户的可用性,过程中会将有效的用户放到VALID_OTHERS_ACCOUNT内，并返回有效账号的个数
-    check_OTHERS_ACCOUNT_valid()
-    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
 
     if RESERVED_SEAT:
         # 预约完成后立即检查自己账号今日还可取消预约的次数
@@ -684,6 +766,8 @@ if __name__ == '__main__':
         ##还剩一次，进行下面的步骤
 
         all_users = list(list(list(VALID_OTHERS_ACCOUNT.keys()).__reversed__()).__add__([USERNAME]).__reversed__())
+
+        login_in(USERNAME,PASSWORD)
 
         if check_cancel_chance(USERNAME)==1:
 
@@ -693,28 +777,22 @@ if __name__ == '__main__':
                 time.sleep(25*60)
                 #检查自己的状态,return返回的，0-今日无记录，3-使用中，4-已使用，6-用户取消，8-已关闭，9-预约开始提醒
                 #签到完成
-                print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+
                 login_in(USERNAME,PASSWORD)
-                print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+
                 if check_status() == 3:
-                    print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
-                    print('■■■人已进馆')
-                    if INFORMED_WAY == 0:
-                        inform_by_dingding('人已进馆')
-                    if INFORMED_WAY == 1:
-                        inform_by_bark('人已进馆')
                     # 检查所在房间是不是长期空房间
                     now_seat_id,now_area=get_now_seat(USERNAME)
                     # 是,更换座位;不是,不用管
-                    if now_area==dwadawf:
+                    if now_area==ALWAYS_SPARE_AREA:
                         checkout(USERNAME)
                         lastest_user_name=all_users[all_users.index(others_account_name)-1]
                         lastest_user_password=VALID_OTHERS_ACCOUNT[lastest_user_name]
                         login_in(lastest_user_name,lastest_user_password)
                         cancel_reserve(USERNAME=lastest_user_name)
                         login_in(USERNAME,PASSWORD)
-                        reserve()
-                        time.sleep(60)
+                        reserve(USERNAME=USERNAME)
+                        time.sleep(120)
                         now_seat_id, now_area = get_now_seat(USERNAME)
                         if check_status()==3 and now_area==RESERVED_SEAT[2]:
                             print('■■■成功完成座位的更换')
@@ -730,7 +808,7 @@ if __name__ == '__main__':
                         if INFORMED_WAY == 1:
                             inform_by_bark('已通过选座机器选择了房间，脚本预约的房间将释放...')
                         print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
-                #未签到     未写出来的else--其余情况为，预约完成了，进馆了，但可能进行了馆内换座位的行为
+                #未签到
                 elif check_status()==9:
                     # 将自己的账号取消预约
                     if cancel_reserve(USERNAME):
@@ -744,7 +822,7 @@ if __name__ == '__main__':
                         if INFORMED_WAY == 1:
                             inform_by_bark('开始救场')
                         login_in(others_account_name,others_account_password)
-                        reserve()
+                        reserve(USERNAME=others_account_name)
                         print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
                 elif check_status() == 6:
                     print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
@@ -758,7 +836,7 @@ if __name__ == '__main__':
                     login_in(last_user_name, last_user_password)
                     cancel_reserve(USERNAME=last_user_name)
                     login_in(others_account_name,others_account_password)
-                    reserve()
+                    reserve(USERNAME=others_account_name)
                     print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
                 ####关于如何检查自己是否到馆，可以选定某个长期有空位的房间（最好永远没有坐满的那种），自己进馆后到机器上刷卡预约那个空房间的任一个位置
                 ####再去检查自己的账号是否处于 今日-那个房间-已使用 状态
