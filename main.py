@@ -14,7 +14,7 @@ import os
 
 
 # github的云函数env定义的值是字符串，所以对于字典或者列表先要将其还原成原来的格式
-USERNAME=os.environ["USERNAME"]  # 账号-->学号
+USERNAME=eval(os.environ["USERNAME"])  # 账号-->学号
 PASSWORD=os.environ["PASSWORD"]  # 密码
 AREA_ID=eval(os.environ["AREA_ID"])  # 想要预约的房间编号，默认是10、8，若想添加其他的，可以先运行脚本，会显示出其他房间的编号，再自行添加或者更改，同时优先考虑高楼层，且房间中优先考虑大座位号
 BANNED_SEAT=eval(os.environ["BANNED_SEAT"])  # 绝对不要的座位号  {房间1号ID:[座位号1,座位号2,座位号3,.....]，房间2号ID:...,...}
@@ -22,8 +22,8 @@ OK_SEAT=eval(os.environ["OK_SEAT"])  # 除了BANNED_SEAT以外座位号的倾向
 DD_BOT_ACCESS_TOKEN = os.environ["DD_BOT_ACCESS_TOKEN"]  # 当只填写了一个通知方式时，未填写的os.environ["xxx"]返回None，所以不影响
 DD_BOT_SECRET = os.environ["DD_BOT_SECRET"]
 BARK_TOKEN=os.environ["BARK_TOKEN"]
-ALWAYS_SPARE_AREA=os.environ["ALWAYS_SPARE_AREA"]  #配合救援模式，填写一个总是坐不满的房间
-SELECT_WAY=os.environ["SELECT_WAY"]  # 筛选座位的方式，可选的为1和2
+ALWAYS_SPARE_AREA=eval(os.environ["ALWAYS_SPARE_AREA"])  #配合救援模式，填写一个总是坐不满的房间
+SELECT_WAY=eval(os.environ["SELECT_WAY"])  # 筛选座位的方式，可选的为1和2
               # 1 优先级在于房间,优先一个房间的所有位置，其次为第二个房间的所有位置，该情况下，同一房间中的大号优先
               # 2 优先级在于座位号,一级优先的是某几个房间的某些位置，二级优先为某几个房间的另外某些位置……(具体见readme.md)
 
@@ -33,7 +33,7 @@ SELECT_WAY=os.environ["SELECT_WAY"]  # 筛选座位的方式，可选的为1和2
 OTHERS_ACCOUNT = {}
 dynamic_variable = locals()
 for i in range(1,11):
-    dynamic_variable[f'OTHERS_ACCOUNT_USERNAME_{i}'] =os.environ[f"OTHERS_ACCOUNT_USERNAME_{i}"]
+    dynamic_variable[f'OTHERS_ACCOUNT_USERNAME_{i}'] =eval(os.environ[f"OTHERS_ACCOUNT_USERNAME_{i}"])
     dynamic_variable[f'OTHERS_ACCOUNT_PASSWORD_{i}'] =os.environ[f"OTHERS_ACCOUNT_PASSWORD_{i}"]
     if dynamic_variable[f'OTHERS_ACCOUNT_USERNAME_{i}']:
         OTHERS_ACCOUNT[dynamic_variable[f'OTHERS_ACCOUNT_USERNAME_{i}']]=dynamic_variable[f'OTHERS_ACCOUNT_PASSWORD_{i}']
