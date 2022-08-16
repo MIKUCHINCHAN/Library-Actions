@@ -86,7 +86,7 @@ def inform_by_dingding(error_msg=''):
         now=datetime.datetime.now()+datetime.timedelta(hours=8)
     else:
         now=datetime.datetime.now()
-    if SOMETHING_WRONG == 0:
+    if RESERVED_SEAT:
         data = {
             "msgtype": "text",
             "text": {
