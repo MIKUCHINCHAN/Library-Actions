@@ -79,6 +79,7 @@
 
   <details>
   <summary><b>Bark</b></summary>
+    
   - `BARK_TOKEN` （可选）：填写自己 Bark 的推送 URL，e.g.`https://api.day.app/thisisatoken`
 
     > 形如 `https://api.day.app/thisisatoken`，用于 Bark 推送打卡结果的通知；**请注意不要以斜杠结尾。**
@@ -89,6 +90,7 @@
 
   <details>
   <summary><b>钉钉机器人</b></summary>
+    
   - `DD_BOT_ACCESS_TOKEN`（可选）：钉钉机器人推送 Token，填写机器人的 Webhook 地址中的 token。只需 `https://oapi.dingtalk.com/robot/send?access_token=XXX` 等于=符号后面的XXX即可，e.g.`WFAWCWAdcaw1!`
 
   - `DD_BOT_SECRET`（可选）：钉钉机器人推送SECRET，[官方文档](https://developers.dingtalk.com/document/app/custom-robot-access)，e.g.`WFAWCWAdcaw1!`
