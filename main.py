@@ -13,17 +13,17 @@ import re
 import os
 
 
-# github的云函数env定义的值是字符串，所以对于字典或者列表先要将其还原成原来的格式
+# github的云函数env定义的值是字符串，所以对于字典或者列表先要将其还原成原来的格式,当某一项留空时，传递的值为空字符串
 USERNAME=eval(os.environ["USERNAME"])  # 账号-->学号
 PASSWORD=os.environ["PASSWORD"]  # 密码
 AREA_ID=eval(os.environ["AREA_ID"])  # 想要预约的房间编号，默认是10、8，若想添加其他的，可以先运行脚本，会显示出其他房间的编号，再自行添加或者更改，同时优先考虑高楼层，且房间中优先考虑大座位号
-BANNED_SEAT=eval(os.environ["BANNED_SEAT"])  # 绝对不要的座位号  {房间1号ID:[座位号1,座位号2,座位号3,.....]，房间2号ID:...,...}
-OK_SEAT=eval(os.environ["OK_SEAT"])  # 除了BANNED_SEAT以外座位号的倾向，即一个房间中哪些位置比较喜欢   房间ID对应的列表内，越靠前的列表越是倾向（倾向分级）
+BANNED_SEAT=eval(os.environ["BANNED_SEAT"]) if os.environ["BANNED_SEAT"] else ''  # 绝对不要的座位号  {房间1号ID:[座位号1,座位号2,座位号3,.....]，房间2号ID:...,...}
+OK_SEAT=eval(os.environ["OK_SEAT"]) if os.environ["OK_SEAT"] else ''  # 除了BANNED_SEAT以外座位号的倾向，即一个房间中哪些位置比较喜欢   房间ID对应的列表内，越靠前的列表越是倾向（倾向分级）
 DD_BOT_ACCESS_TOKEN = os.environ["DD_BOT_ACCESS_TOKEN"]  # 当只填写了一个通知方式时，未填写的os.environ["xxx"]返回None，所以不影响
 DD_BOT_SECRET = os.environ["DD_BOT_SECRET"]
 BARK_TOKEN=os.environ["BARK_TOKEN"]
-ALWAYS_SPARE_AREA=eval(os.environ["ALWAYS_SPARE_AREA"])  #配合救援模式，填写一个总是坐不满的房间
-SELECT_WAY=eval(os.environ["SELECT_WAY"])  # 筛选座位的方式，可选的为1和2
+ALWAYS_SPARE_AREA=eval(os.environ["ALWAYS_SPARE_AREA"]) if os.environ["ALWAYS_SPARE_AREA"] else ''  #配合救援模式，填写一个总是坐不满的房间
+SELECT_WAY=eval(os.environ["SELECT_WAY"]) if os.environ["SELECT_WAY"] else ''  # 筛选座位的方式，可选的为1和2
               # 1 优先级在于房间,优先一个房间的所有位置，其次为第二个房间的所有位置，该情况下，同一房间中的大号优先
               # 2 优先级在于座位号,一级优先的是某几个房间的某些位置，二级优先为某几个房间的另外某些位置……(具体见readme.md)
 
@@ -794,7 +794,7 @@ if __name__ == '__main__':
 
         login_in_1(USERNAME,PASSWORD)
 
-        if check_cancel_chance(USERNAME)==1:
+        if check_cancel_chance(USERNAME)==1 and len(all_users)>=2:
 
             for others_account_name,others_account_password in VALID_OTHERS_ACCOUNT.items():
 
@@ -809,30 +809,33 @@ if __name__ == '__main__':
                     # 检查所在房间是不是长期空房间
                     now_seat_id,now_area=get_now_seat(USERNAME)
                     # 是,更换座位;不是,不用管
-                    if now_area==ALWAYS_SPARE_AREA:
-                        checkout(USERNAME)
-                        lastest_user_name=all_users[all_users.index(others_account_name)-1]
-                        lastest_user_password=VALID_OTHERS_ACCOUNT[lastest_user_name]
-                        login_in_1(lastest_user_name,lastest_user_password)
-                        cancel_reserve(USERNAME=lastest_user_name)
-                        login_in_1(USERNAME,PASSWORD)
-                        reserve(USERNAME=USERNAME)
-                        time.sleep(120)
-                        now_seat_id, now_area = get_now_seat(USERNAME)
-                        if check_status()==3 and now_area==RESERVED_SEAT[2]:
-                            print('■■■成功完成座位的更换')
+                    if ALWAYS_SPARE_AREA:
+                        if now_area==ALWAYS_SPARE_AREA:
+                            checkout(USERNAME)
+                            lastest_user_name=all_users[all_users.index(others_account_name)-1]
+                            lastest_user_password=VALID_OTHERS_ACCOUNT[lastest_user_name]
+                            login_in_1(lastest_user_name,lastest_user_password)
+                            cancel_reserve(USERNAME=lastest_user_name)
+                            login_in_1(USERNAME,PASSWORD)
+                            reserve(USERNAME=USERNAME)
+                            time.sleep(120)
+                            now_seat_id, now_area = get_now_seat(USERNAME)
+                            if check_status()==3 and now_area==RESERVED_SEAT[2]:
+                                print('■■■成功完成座位的更换')
+                                if INFORMED_WAY == 0:
+                                    inform_by_dingding('成功完成座位的更换')
+                                if INFORMED_WAY == 1:
+                                    inform_by_bark('成功完成座位的更换')
+                                print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+                        else:
+                            print('已通过选座机器选择了房间，脚本预约的房间将释放...')
                             if INFORMED_WAY == 0:
-                                inform_by_dingding('成功完成座位的更换')
+                                inform_by_dingding('已通过选座机器选择了房间，脚本预约的房间将释放...')
                             if INFORMED_WAY == 1:
-                                inform_by_bark('成功完成座位的更换')
+                                inform_by_bark('已通过选座机器选择了房间，脚本预约的房间将释放...')
                             print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
                     else:
-                        print('已通过选座机器选择了房间，脚本预约的房间将释放...')
-                        if INFORMED_WAY == 0:
-                            inform_by_dingding('已通过选座机器选择了房间，脚本预约的房间将释放...')
-                        if INFORMED_WAY == 1:
-                            inform_by_bark('已通过选座机器选择了房间，脚本预约的房间将释放...')
-                        print("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■")
+                        print('您已经开启救援模式，但未填写ALWAYS_SPARE_AREA项！')
                 #未签到
                 elif check_status()==9:
                     # 将自己的账号取消预约
