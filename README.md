@@ -107,7 +107,7 @@
 
 ### Step3 配置脚本运行时间(可选，如果没有定时预约座位需求的可以跳过这一步)
 
-脚本的触发运行时间由项目仓库内`.github/workflows`的两个 Workflow 文件配置：
+脚本的触发运行时间由项目仓库内`.github/workflows`的 Workflow 文件配置：
 
 - `Library.yml`
   - 对应脚本`main.py`
